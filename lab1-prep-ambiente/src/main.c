@@ -2,8 +2,8 @@
 #define _USE_MATH_DEFINES  // Deve ser definido ANTES de incluir math.h
 #include <math.h>
 #include <time.h>
-#include "Matrix.h"
-#include "Integral.h"
+#include "../include/Integral.h"
+#include "../include/Matrix.h"
 
 // ==================== FUNÇÕES PARA TESTE DE INTEGRAL ====================
 
