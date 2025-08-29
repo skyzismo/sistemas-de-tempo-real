@@ -5,7 +5,7 @@
 #include <math.h>
 #include <time.h>
 
-#define MATRIX_EPSILON 1e-10
+#define MATRIX_EPSILON 1e-12
 
 struct Matrix {
     size_t rows;
@@ -25,7 +25,7 @@ Matrix* matrix_create(size_t rows, size_t cols) {
 
     matrix->rows = rows;
     matrix->cols = cols;
-    matrix->data = malloc(rows * cols * sizeof(double));
+    matrix->data = calloc(rows * cols, sizeof(double));
     
     if (!matrix->data) {
         free(matrix);
@@ -83,9 +83,13 @@ void matrix_ones(Matrix* matrix) {
 void matrix_random(Matrix* matrix, double min, double max) {
     if (!matrix) return;
     
-    srand(time(NULL));
-    double range = max - min;
+    static int seeded = 0;
+    if (!seeded) {
+        srand(time(NULL));
+        seeded = 1;
+    }
     
+    double range = max - min;
     for (size_t i = 0; i < matrix->rows * matrix->cols; i++) {
         matrix->data[i] = min + ((double)rand() / RAND_MAX) * range;
     }
@@ -159,6 +163,28 @@ void matrix_scale(const Matrix* matrix, double scalar, Matrix* result) {
     }
 }
 
+void matrix_add_scalar(const Matrix* matrix, double scalar, Matrix* result) {
+    if (!matrix || !result || 
+        matrix->rows != result->rows || matrix->cols != result->cols) {
+        return;
+    }
+    
+    for (size_t i = 0; i < matrix->rows * matrix->cols; i++) {
+        result->data[i] = matrix->data[i] + scalar;
+    }
+}
+
+void matrix_subtract_scalar(const Matrix* matrix, double scalar, Matrix* result) {
+    if (!matrix || !result || 
+        matrix->rows != result->rows || matrix->cols != result->cols) {
+        return;
+    }
+    
+    for (size_t i = 0; i < matrix->rows * matrix->cols; i++) {
+        result->data[i] = matrix->data[i] - scalar;
+    }
+}
+
 bool matrix_transpose(const Matrix* matrix, Matrix* result) {
     if (!matrix || !result || 
         matrix->rows != result->cols || matrix->cols != result->rows) {
@@ -174,10 +200,12 @@ bool matrix_transpose(const Matrix* matrix, Matrix* result) {
 }
 
 static double matrix_determinant_recursive(const Matrix* matrix) {
-    if (matrix->rows == 1) {
+    size_t n = matrix->rows;
+    
+    if (n == 1) {
         return matrix_get(matrix, 0, 0);
     }
-    if (matrix->rows == 2) {
+    if (n == 2) {
         return matrix_get(matrix, 0, 0) * matrix_get(matrix, 1, 1) -
                matrix_get(matrix, 0, 1) * matrix_get(matrix, 1, 0);
     }
@@ -185,14 +213,13 @@ static double matrix_determinant_recursive(const Matrix* matrix) {
     double det = 0.0;
     int sign = 1;
     
-    for (size_t j = 0; j < matrix->cols; j++) {
-        // Criar submatriz menor
-        Matrix* minor = matrix_create(matrix->rows - 1, matrix->cols - 1);
+    for (size_t j = 0; j < n; j++) {
+        Matrix* minor = matrix_create(n - 1, n - 1);
         if (!minor) continue;
         
-        for (size_t row = 1; row < matrix->rows; row++) {
+        for (size_t row = 1; row < n; row++) {
             size_t col_index = 0;
-            for (size_t col = 0; col < matrix->cols; col++) {
+            for (size_t col = 0; col < n; col++) {
                 if (col != j) {
                     matrix_set(minor, row - 1, col_index++, matrix_get(matrix, row, col));
                 }
@@ -220,34 +247,33 @@ bool matrix_inverse(const Matrix* matrix, Matrix* result) {
         return false;
     }
     
+    size_t n = matrix->rows;
     double det = matrix_determinant(matrix);
     if (fabs(det) < MATRIX_EPSILON) {
         return false;
     }
     
-    if (matrix->rows == 1) {
+    if (n == 1) {
         matrix_set(result, 0, 0, 1.0 / matrix_get(matrix, 0, 0));
         return true;
     }
     
-    // Para matrizes maiores, usar método de cofatores
-    Matrix* cofactor = matrix_create(matrix->rows, matrix->cols);
+    Matrix* cofactor = matrix_create(n, n);
     if (!cofactor) return false;
     
-    for (size_t i = 0; i < matrix->rows; i++) {
-        for (size_t j = 0; j < matrix->cols; j++) {
-            // Criar matriz menor
-            Matrix* minor = matrix_create(matrix->rows - 1, matrix->cols - 1);
+    for (size_t i = 0; i < n; i++) {
+        for (size_t j = 0; j < n; j++) {
+            Matrix* minor = matrix_create(n - 1, n - 1);
             if (!minor) {
                 matrix_destroy(cofactor);
                 return false;
             }
             
             size_t minor_row = 0;
-            for (size_t row = 0; row < matrix->rows; row++) {
+            for (size_t row = 0; row < n; row++) {
                 if (row == i) continue;
                 size_t minor_col = 0;
-                for (size_t col = 0; col < matrix->cols; col++) {
+                for (size_t col = 0; col < n; col++) {
                     if (col == j) continue;
                     matrix_set(minor, minor_row, minor_col++, matrix_get(matrix, row, col));
                 }
@@ -260,7 +286,7 @@ bool matrix_inverse(const Matrix* matrix, Matrix* result) {
         }
     }
     
-    Matrix* adjugate = matrix_create(matrix->rows, matrix->cols);
+    Matrix* adjugate = matrix_create(n, n);
     if (!adjugate) {
         matrix_destroy(cofactor);
         return false;
@@ -282,10 +308,11 @@ void matrix_print(const Matrix* matrix) {
     
     printf("Matrix %zux%zu:\n", matrix->rows, matrix->cols);
     for (size_t i = 0; i < matrix->rows; i++) {
+        printf("[ ");
         for (size_t j = 0; j < matrix->cols; j++) {
             printf("%8.4f ", matrix_get(matrix, i, j));
         }
-        printf("\n");
+        printf("]\n");
     }
 }
 

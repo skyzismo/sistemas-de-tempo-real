@@ -9,7 +9,7 @@ IntegralConfig integral_config_create(MathFunction func, double a, double b) {
         .a = a,
         .b = b,
         .n = 1000,
-        .method = INTEGRAL_METHOD_SIMPSON,
+        .method = INTEGRAL_METHOD_SIMPSON_COMPOSITE,
         .tolerance = 1e-8,
         .max_iterations = 1000
     };
@@ -64,18 +64,24 @@ IntegralResult integral_calculate(const IntegralConfig* config) {
             result.result = integral_simpson(config->function, config->a, config->b, config->n);
             result.function_evaluations = 2 * config->n + 1;
             break;
+            
+        case INTEGRAL_METHOD_TRAPEZOID_COMPOSITE:
+            result.result = integral_trapezoid_composite(config->function, config->a, config->b, config->n);
+            result.function_evaluations = config->n + 1;
+            break;
+            
+        case INTEGRAL_METHOD_SIMPSON_COMPOSITE:
+            result.result = integral_simpson_composite(config->function, config->a, config->b, config->n);
+            result.function_evaluations = 2 * config->n + 1;
+            break;
     }
     
-    // Estimativa simples de erro (pode ser melhorada)
-    if (config->n >= 2) {
+    // Estimativa de erro
+    if (config->n >= 4) {
         double result_h = result.result;
-        double result_h2 = integral_calculate(&(IntegralConfig){
-            .function = config->function,
-            .a = config->a,
-            .b = config->b,
-            .n = config->n / 2,
-            .method = config->method
-        }).result;
+        IntegralConfig half_config = *config;
+        half_config.n = config->n / 2;
+        double result_h2 = integral_calculate(&half_config).result;
         
         result.error_estimate = fabs(result_h - result_h2);
     }
@@ -157,65 +163,76 @@ double integral_simpson(MathFunction f, double a, double b, size_t n) {
     return sum * h / 3.0;
 }
 
-static double adaptive_recursive(MathFunction f, double a, double b, 
-                               double tolerance, int max_depth, int depth) {
-    if (depth >= max_depth) {
-        return integral_simpson(f, a, b, 2);
-    }
+double integral_trapezoid_composite(MathFunction f, double a, double b, size_t n) {
+    // Implementação composta com refinamento iterativo
+    if (n < 2) n = 2;
     
-    double mid = (a + b) / 2.0;
-    double whole = integral_simpson(f, a, b, 2);
-    double left = integral_simpson(f, a, mid, 2);
-    double right = integral_simpson(f, mid, b, 2);
+    double previous_result = 0.0;
+    double current_result = integral_trapezoid(f, a, b, n);
     
-    if (fabs(whole - (left + right)) < 15.0 * tolerance) {
-        return left + right + (left + right - whole) / 15.0;
-    }
-    
-    return adaptive_recursive(f, a, mid, tolerance/2, max_depth, depth + 1) +
-           adaptive_recursive(f, mid, b, tolerance/2, max_depth, depth + 1);
-}
-
-double integral_adaptive(MathFunction f, double a, double b, double tolerance, int max_depth) {
-    return adaptive_recursive(f, a, b, tolerance, max_depth, 0);
-}
-
-double integral_double(MathFunction2D f, double a, double b, double c, double d, 
-                      size_t n, IntegralMethod method) {
-
-    // Primeiro integramos em y para cada x, depois integramos em x
-    double h_x = (b - a) / n;
-    double h_y = (d - c) / n;
-    double result = 0.0;
-    
-    for (size_t i = 0; i < n; i++) {
-        double x = a + (i + 0.5) * h_x;  // Ponto médio em x
+    for (size_t iter = 0; iter < 10; iter++) {
+        previous_result = current_result;
+        n *= 2;
+        current_result = integral_trapezoid(f, a, b, n);
         
-        // Integrar f(x, y) em y para este x fixo
-        double sum_y = 0.0;
-        for (size_t j = 0; j < n; j++) {
-            double y = c + (j + 0.5) * h_y;  // Ponto médio em y
-            sum_y += f(x, y);
+        if (fabs(current_result - previous_result) < 1e-8) {
+            break;
         }
-        double integral_y = sum_y * h_y;
+    }
+    
+    return current_result;
+}
+
+double integral_simpson_composite(MathFunction f, double a, double b, size_t n) {
+    // Implementação composta com refinamento iterativo
+    if (n < 4 || n % 2 != 0) n = 4;
+    
+    double previous_result = 0.0;
+    double current_result = integral_simpson(f, a, b, n);
+    
+    for (size_t iter = 0; iter < 10; iter++) {
+        previous_result = current_result;
+        n *= 2;
+        current_result = integral_simpson(f, a, b, n);
         
-        result += integral_y;
+        if (fabs(current_result - previous_result) < 1e-8) {
+            break;
+        }
     }
     
-    return result * h_x;
+    return current_result;
+}
+
+double integral_romberg(MathFunction f, double a, double b, double tolerance, size_t max_iter) {
+    if (max_iter < 1) max_iter = 1;
     
-    // Função auxiliar para integrar em y para um x fixo
-    double integrate_y(double x); {
-        IntegralConfig config = integral_config_create(f, c, d);
-        integral_config_set_method(&config, method);
-        integral_config_set_intervals(&config, n);
-        return integral_calculate(&config).result;
+    double R[max_iter][max_iter];
+    
+    // Primeira aproximação (Regra do Trapézio com n=1)
+    R[0][0] = (b - a) * (f(a) + f(b)) / 2.0;
+    
+    for (size_t i = 1; i < max_iter; i++) {
+        // Refinamento da regra do trapézio
+        size_t n = 1 << i; // 2^i
+        double h = (b - a) / n;
+        double sum = 0.0;
+        
+        for (size_t k = 1; k <= n-1; k += 2) {
+            sum += f(a + k * h);
+        }
+        
+        R[i][0] = 0.5 * R[i-1][0] + h * sum;
+        
+        // Extrapolação de Richardson
+        for (size_t j = 1; j <= i; j++) {
+            R[i][j] = R[i][j-1] + (R[i][j-1] - R[i-1][j-1]) / (pow(4, j) - 1);
+        }
+        
+        // Verificar convergência
+        if (i > 0 && fabs(R[i][i] - R[i-1][i-1]) < tolerance) {
+            return R[i][i];
+        }
     }
     
-    // Integrar a função auxiliar em x
-    IntegralConfig config = integral_config_create(integrate_y, a, b);
-    integral_config_set_method(&config, method);
-    integral_config_set_intervals(&config, n);
-    
-    return integral_calculate(&config).result;
+    return R[max_iter-1][max_iter-1];
 }

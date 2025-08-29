@@ -1,12 +1,31 @@
-CC = gcc
-CFLAGS = -std=c17 -Wall -Wextra -pedantic -O2 -lm
-TARGET = math_app
-OBJS = Matrix.o Integral.o interface.o
+# Makefile para compilar Matrix e Integral ADTs
 
+# Compilador e flags
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c99 -pedantic -O2 -lm
+DEBUG_CFLAGS = -Wall -Wextra -std=c99 -pedantic -g -O0 -lm
+
+# Nome do executável
+TARGET = main
+
+# Arquivos fonte
+SRCS = main.c Matrix.c Integral.c
+OBJS = $(SRCS:.c=.o)
+
+# Regra padrão
 all: $(TARGET)
 
+# Compilação com otimização
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS) -lm
+	$(CC) $(OBJS) -o $(TARGET) $(CFLAGS)
+
+# Compilação para debug
+debug: CFLAGS = $(DEBUG_CFLAGS)
+debug: $(TARGET)
+
+# Regras de compilação individuais
+main.o: main.c Matrix.h Integral.h
+	$(CC) $(CFLAGS) -c main.c
 
 Matrix.o: Matrix.c Matrix.h
 	$(CC) $(CFLAGS) -c Matrix.c
@@ -14,13 +33,19 @@ Matrix.o: Matrix.c Matrix.h
 Integral.o: Integral.c Integral.h
 	$(CC) $(CFLAGS) -c Integral.c
 
-main.o: main.c Matrix.h Integral.h
-	$(CC) $(CFLAGS) -c main.c
-
+# Limpeza
 clean:
-	rm -f $(TARGET) $(OBJS)
+	rm -f $(OBJS) $(TARGET)
 
+# Recompilar tudo
+rebuild: clean all
+
+# Executar o programa
 run: $(TARGET)
 	./$(TARGET)
 
-.PHONY: all clean run
+# Executar com valgrind (para debug)
+valgrind: debug
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./$(TARGET)
+
+.PHONY: all clean rebuild run debug valgrind
