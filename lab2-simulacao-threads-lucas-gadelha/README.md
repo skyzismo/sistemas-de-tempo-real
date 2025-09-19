@@ -1,5 +1,7 @@
 # Laboratório 2 — Simulação de Robô Móvel em Tempo Real (Threads)
 
+Desenvolvido por **Lucas Vinícius Gonçalves Gadelha - 22050517**
+
 Esta pasta contém uma **estrutura reutilizável** para os próximos laboratórios. O sistema é dividido em duas tarefas usando **pthread**:
 
 - **Tarefa de Simulação (`plant`)** — período nominal `Ts = 50 ms`: integra o modelo do robô móvel e publica a saída **y_f(t)** (ponto à frente do robô).

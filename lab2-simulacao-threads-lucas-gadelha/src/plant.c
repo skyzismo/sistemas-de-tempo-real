@@ -1,3 +1,4 @@
+#define _GNU_SOURCE 1
 #include "plant.h"
 #include <stdio.h>
 #include <math.h>

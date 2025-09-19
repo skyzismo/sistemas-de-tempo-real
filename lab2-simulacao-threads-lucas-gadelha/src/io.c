@@ -1,6 +1,10 @@
+#define _GNU_SOURCE 1
 #include "io.h"
 #include <stdio.h>
 #include <math.h>
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 #include <time.h>
 #include <string.h>
 
