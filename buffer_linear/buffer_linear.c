@@ -10,7 +10,7 @@ typedef struct elemento
 
 typedef struct buffer
 {
-    elemento *elemento;
+    elemento *primeiro;
     int cap, qtd;
 }buffer;
 
@@ -19,7 +19,7 @@ buffer *buffer_criar(int cap){
     buffer *b = malloc(sizeof(buffer)); //cria a estrutura
 
     if (b != NULL){
-        b->elemento = NULL;
+        b->primeiro = NULL;
         b->cap = cap;
         b->qtd = 0;
     }
@@ -28,7 +28,7 @@ buffer *buffer_criar(int cap){
 }
 
 void buffer_destruir(buffer *b){
-    elemento *atual = b->elemento;
+    elemento *atual = b->primeiro;
     elemento *proximo;
 
     while (atual != NULL)
@@ -45,23 +45,50 @@ void buffer_destruir(buffer *b){
 void buffer_inserir(buffer *b, int valor){
     if(b->qtd < b->cap){
         elemento *e = malloc(sizeof(elemento));
-        elemento *atual = e;
 
-        e->valor = valor;
+        if(e != NULL){
+            e->valor = valor;
+            e->proximo = NULL; // sera o ultimo elemento
 
-        e->proximo = NULL;
+            if (b->primeiro == NULL){
+                b->primeiro = e;
+            }
 
-        b->elemento = e;
+            else{
+                
+                elemento *atual = b->primeiro;
 
-        while (atual != NULL)
-        {
-            proximo = atual->proximo;
-            free(atual);
-            atual = proximo;
+                while (atual->proximo != NULL)
+                {
+                    atual = atual->proximo;
+                }
+
+                atual->proximo = e;
+            }
+
+            b->qtd++;
+            
         }
-
-        b->qtd++;
     }
+}
+
+int buffer_remover(buffer *b){
+    if (b->primeiro == NULL)
+    {
+        return -1;
+    }
+
+    elemento *removido = b->primeiro;
+    int valor = removido->valor;
+
+    b->primeiro = b->primeiro->proximo;
+
+    free(removido);
+
+    b->qtd--;
+
+    return valor;
+    
 }
 
 int buffer_capacidade(buffer *b){

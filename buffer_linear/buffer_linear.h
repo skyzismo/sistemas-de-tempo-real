@@ -6,6 +6,7 @@ typedef struct buffer buffer;
 buffer *buffer_criar(int cap);
 void buffer_destruir(buffer *b);
 void buffer_inserir(buffer *b, int valor);
+int buffer_remover(buffer *b);
 
 int buffer_capacidade(buffer *b);
 int buffer_quantidade(buffer *b);
