@@ -1,4 +1,4 @@
-#include<buffer_linear.h>
+#include"buffer_linear.h"
 #include<stdlib.h>
 
 typedef struct elemento
@@ -15,6 +15,7 @@ typedef struct buffer
 }buffer;
 
 buffer *buffer_criar(int cap){
+
     buffer *b = malloc(sizeof(buffer)); //cria a estrutura
 
     if (b != NULL){
@@ -24,4 +25,26 @@ buffer *buffer_criar(int cap){
     }
 
     return b; //retorna o endereço
+}
+
+void *buffer_destruir(buffer *b){
+    elemento *atual = b->elemento;
+
+    while (atual != NULL)
+    {
+        atual = atual->proximo;
+        free(atual);
+        atual = atual->valor;
+    }
+
+    free(b);
+    
+}
+
+int buffer_capacidade(buffer *b){
+    return b->cap;
+}
+
+int buffer_quantidade(buffer *b){
+    return b->qtd;
 }
