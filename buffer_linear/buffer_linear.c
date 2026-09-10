@@ -27,18 +27,41 @@ buffer *buffer_criar(int cap){
     return b; //retorna o endereço
 }
 
-void *buffer_destruir(buffer *b){
+void buffer_destruir(buffer *b){
     elemento *atual = b->elemento;
+    elemento *proximo;
 
     while (atual != NULL)
     {
-        atual = atual->proximo;
+        proximo = atual->proximo;
         free(atual);
-        atual = atual->valor;
+        atual = proximo;
     }
 
     free(b);
     
+}
+
+void buffer_inserir(buffer *b, int valor){
+    if(b->qtd < b->cap){
+        elemento *e = malloc(sizeof(elemento));
+        elemento *atual = e;
+
+        e->valor = valor;
+
+        e->proximo = NULL;
+
+        b->elemento = e;
+
+        while (atual != NULL)
+        {
+            proximo = atual->proximo;
+            free(atual);
+            atual = proximo;
+        }
+
+        b->qtd++;
+    }
 }
 
 int buffer_capacidade(buffer *b){
