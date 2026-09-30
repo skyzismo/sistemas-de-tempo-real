@@ -40,13 +40,13 @@ int main(int argc, char const *argv[])
         switch (next_task)
         {
         case 'A':
-            A('A', 10);
+            A("A", 10);
             comp += 10;
             next_task = 'B';
             break;
 
         case 'B':
-            B('B', 8);
+            B("B", 8);
             comp += 8;
 
             if(cycle ==0 || cycle ==2) next_task = 'C';
@@ -54,14 +54,14 @@ int main(int argc, char const *argv[])
             break;
 
         case 'C':
-            C('C', 5);
+            C("C", 5);
             comp += 5;
             if(cycle ==0 || cycle ==2) next_task = 'I';
             else printf("Erro no ciclo\n");
             break;
 
         case 'D':
-            D('D', 4);
+            D("D", 4);
             comp += 4;
             if(cycle ==1) next_task = 'E';
             else if(cycle == 3) next_task = 'I';
@@ -69,7 +69,7 @@ int main(int argc, char const *argv[])
             break;
 
         case 'E':
-            E('E', 2);
+            E("E", 2);
             comp += 2;
             next_task = 'I';
             break;
